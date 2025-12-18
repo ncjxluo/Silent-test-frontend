@@ -15,7 +15,7 @@
           <el-collapse :expand-icon-position="position">
             <el-collapse-item :title="date" v-for="(suites, date) in grouped" :key="date">
               <div
-                v-for="suite in suites"
+                v-for="(suite,index) in suites"
                 :key="suite.suite_key"
                 class="suite-panel"
                 :class="getProgressClass(suite.progress)"
@@ -25,7 +25,7 @@
                   <div class="circular-progress"></div>
                   <div class="suite-content">
                     <div class="suite-name" @click="handleSuiteClick(suite.suite_key)">
-                      {{ suite.suite_name }} | {{ suite.created_at }}
+                      {{ suites.length - index }} - {{ suite.suite_name }} | {{ suite.created_at }}
                     </div>
                     <div class="suite-status">
                       {{ suite.status }}
@@ -76,14 +76,21 @@
           <el-table :data="filterTableData">
             <el-table-column prop="plan_name" label="测试计划名" align="center" />
             <el-table-column prop="status" label="计划状态" align="center" />
-            <el-table-column label="任务进度" align="center">
+            <el-table-column prop="plan_task_sum" label="测试计划总数" align="center" />
+            <el-table-column prop="failed_case_num" label="失败case数" align="center" />
+            <el-table-column label="通过率" align="center" >
               <template #default="scope">
-                <el-progress type="circle" :percentage="scope.row.plan_task_sum" width="50" />
+                <el-tag
+                  :type="getTagType(scope.row)"
+                  size="small"
+                >
+                  {{ getPassRate(scope.row) }}
+                </el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="created_at" label="创建时间" align="center" />
             <el-table-column prop="updated_at" label="完成时间" align="center" />
-            <el-table-column fixed="right" label="操作" width="350" align="center">
+            <el-table-column fixed="right" label="操作" width="300" align="center">
               <template #default="scope">
                 <el-button type="primary" text bg size="small" @click="detailClick(scope.row.suite_key, scope.row.plan_key)">
                   执行详情
@@ -137,6 +144,8 @@
       <el-table-column property="max_response_time" label="最大响应时间" />
       <el-table-column property="median" label="中位数" />
       <el-table-column property="p90_response_time" label="90响应时间" />
+      <el-table-column property="p95_response_time" label="95响应时间" />
+      <el-table-column property="p99_response_time" label="99响应时间" />
     </el-table>
   </el-dialog>
 </template>
@@ -165,8 +174,8 @@ const { fetchSuites, fetchPlans, fetchCases_statistic } = api_reports()
 const router = useRouter()
 const search = ref('')
 
-const defaultCounts = ref([3, 30, 50, 100])
-const defaultCount = ref(3)
+const defaultCounts = ref([30, 50, 100])
+const defaultCount = ref(30)
 const currentPage = ref(1)
 const totalCount = ref(0)
 const autoUpdate = ref(true)
@@ -204,6 +213,8 @@ interface CasesItem {
   max_response_time: string;
   median: string;
   p90_response_time: string;
+  p95_response_time: string;
+  p99_response_time: string;
 }
 
 interface CasesStatistics {
@@ -330,6 +341,27 @@ const stopAutoUpdate = () => {
     timer = null
   }
 }
+
+const getPassRate = (row:any) => {
+  const { plan_task_sum, failed_case_num } = row;
+  if (plan_task_sum === 0) {
+    return '暂无数据';
+  }
+  const passNum = Math.max(0, plan_task_sum - failed_case_num);
+  const rate = (passNum / plan_task_sum) * 100;
+  return `${rate.toFixed(2)}%`;
+};
+
+const getTagType = (row:any) => {
+  const { plan_task_sum, failed_case_num } = row;
+  if (plan_task_sum === 0) {
+    return 'info'; // 暂无数据用蓝色
+  }
+  const passNum = Math.max(0, plan_task_sum - failed_case_num);
+  const rate = (passNum / plan_task_sum) * 100;
+  // 自定义阈值：≥90%为绿色，否则为红色（可根据需求调整）
+  return rate === 100 ? 'success' : 'danger';
+};
 
 </script>
 

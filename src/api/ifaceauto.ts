@@ -19,3 +19,7 @@ export const get_api_cases = (query = {} ) =>{
 export const get_api_path_select = (query = {} ) =>{
   return service.get('/apireport/get_api_path_select', {params: query})
 }
+
+export const edit_api_cases = (data = {}) =>{
+  return service.post('/apireport/edit_api_cases',data)
+}

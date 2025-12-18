@@ -9,7 +9,7 @@
         </el-form-item>
         <el-form-item prop="status" label="执行状态">
           <el-select v-model="status_value" clearable placeholder="请选择状态" style="width: 240px">
-            <el-option v-for="item in options" :key="item.value" :value="item.value" />
+            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item prop="phone" label="耗时">
@@ -133,7 +133,7 @@
                     show-overflow-tooltip
                     :tooltip-formatter="fromatter_data"
                   />
-                  <el-table-column label="备注" prop="remarks" />
+<!--                  <el-table-column label="备注" prop="remarks" />-->
                   <el-table-column fixed="right" label="操作" width="150" align="center">
                     <template #default="scope">
                       <el-button
@@ -167,7 +167,29 @@
             </template>
           </el-table-column>
           <el-table-column label="执行case" prop="case_key" />
-          <el-table-column label="sql语句" v-if="showColumn" prop="sql" />
+          <el-table-column label="sql语句" width="600" v-if="showColumn" prop="sql" />
+          <el-table-column label="备注"  width="130" >
+            <template #default="scope">
+              <el-select
+                v-model="scope.row.remarks"
+                placeholder=""
+                size="small"
+                style="width: 100px;"
+              ><el-option label="无异常" value="无异常" />
+              <el-option label="存在误报" value="存在误报" />
+              <el-option label="确有异常" value="确认异常" />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column fixed="right" label="操作" width="100" align="center">
+            <template #default="scope">
+              <el-button type="primary" text bg size="small"
+                         @click="editCase(scope.row)"
+              >
+                编辑case
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
       <div class="pager-wrapper">
@@ -235,6 +257,7 @@ import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import { edit_api_cases } from '@/api/ifaceauto.ts'
 
 const route = useRoute()
 
@@ -248,7 +271,7 @@ const requestParam = ref({})
 const realResponse = ref({})
 const assertDetails = ref({})
 
-const { fetchCases, fetchPathSelect } = api_reports()
+const { fetchCases, fetchPathSelect, editorCase } = api_reports()
 
 const suite_key = route.params.suite_key as string
 const plan_key = route.params.plan_key as string
@@ -269,12 +292,12 @@ const time_toValue = ref('')
 
 const options = [
   {
-    value: '成功',
-    status: '成功',
+    value: '0',
+    label: '成功',
   },
   {
-    value: '失败',
-    status: '失败',
+    value: '1',
+    label: '失败',
   },
 ]
 
@@ -297,13 +320,13 @@ interface CasesItem {
   assert_res_details?: string
   assert_ver_sign?: string
   assert_time_sign?: string
-  remarks?: string
 }
 
 interface CaseDatas {
   case_key?: string
   case_status?: string
   sql?: string
+  remarks?: string
   child_item?: CasesItem[]
 }
 
@@ -517,8 +540,7 @@ const currentAllDatas = async () => {
             '断言结果标记': truncateText(child.assert_res_sign,1000),
             '断言详情': truncateText(child.assert_res_details,1000),
             '断言验证标记': child.assert_ver_sign,
-            '断言时间标记': child.assert_time_sign,
-            '备注': child.remarks
+            '断言时间标记': child.assert_time_sign
           })
         })
       }
@@ -586,6 +608,35 @@ const truncateText = (text: string | undefined, maxLength: number = 1000): strin
   return text.substring(0, maxLength) + '...（已截断）'
 }
 
+const editCase = async (row:any) => {
+  console.log(suite_key)
+  console.log(plan_key)
+  console.log(row.remarks)
+  console.log(row)
+  const res = await editorCase({
+    "suite_key": suite_key,
+    "plan_key": plan_key,
+    "case_key": row.case_key,
+    "remarks": row.remarks
+  })
+  if (res.msg == '更新成功') {
+    await fecthCasesData(
+      suite_key,
+      plan_key,
+      currentPage.value,
+      defaultCount.value,
+      path_select.value,
+      status_value.value,
+      time_fromValue.value,
+      time_toValue.value,
+    )
+    ElMessage.success(res.msg)
+  }else {
+    ElMessage.error(res.msg)
+  }
+
+
+}
 
 </script>
 
