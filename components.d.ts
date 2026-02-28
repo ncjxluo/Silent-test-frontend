@@ -14,6 +14,7 @@ declare module 'vue' {
     GeneralDialog: typeof import('./src/components/GeneralDialog.vue')['default']
     GeneralDrawer: typeof import('./src/components/GeneralDrawer.vue')['default']
     GeneralTable: typeof import('./src/components/GeneralTable.vue')['default']
+    GeneralTree: typeof import('./src/components/GeneralTree.vue')['default']
     Placeholder: typeof import('./src/components/Placeholder.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

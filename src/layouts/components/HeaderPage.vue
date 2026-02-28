@@ -88,7 +88,7 @@ const handleLogout = () => {
 .icon-btn {
   @apply flex justify-center items-center;
   width: 42px;
-  height: 64px;
+  height: 60px;
   cursor: pointer;
 }
 
@@ -97,7 +97,7 @@ const handleLogout = () => {
 }
 
 .f-header .dropdown {
-  height: 64px;
+  height: 60px;
   cursor: pointer;
   @apply flex justify-center items-center mx-5;
 }

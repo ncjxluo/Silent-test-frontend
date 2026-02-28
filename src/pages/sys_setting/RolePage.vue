@@ -10,6 +10,7 @@
     v-model:default-count="defaultCount"
     :total-count="totalCount"
     :search-keys="searchKeys"
+    :is_enable_selected="false"
     :is_enable="is_enable"
     @update:currentPage="changePage"
     @update:defaultCount="changeCount"
@@ -213,7 +214,7 @@ onMounted(async () => {
     await fecthRoleData(currentPage.value, defaultCount.value)
     const menus: MenuItem[] = await fetchMenu()
     const menus_tree = buildTree(menus)
-    t_data.value = filterTree(menus_tree)
+    t_data.value = filterTree(menus_tree, -1)
     treeData.value = t_data.value
     updateTreeData.value = t_data.value
   } catch (error) {
@@ -267,11 +268,14 @@ const roledesc = ref('')
 
 const pendingPermissionKeys = ref<string[]>([])
 
+const init_menus = ref('')
+
 const showDrawer = async (row: any, btype: string) => {
   rolename.value = row.role_name
   roledesc.value = row.description
   const parentMenuKeys = collectParentKeys(t_data.value)
   const keyList = await fetchActiveRole({ "role_key": row.role_key })
+  init_menus.value = keyList
   pendingPermissionKeys.value = keyList.filter((key:any) => !parentMenuKeys.has(key))
 
   if (btype === 'find') {
@@ -334,9 +338,17 @@ const edit_role = async (row: any) => {
     "role_key": row.role_key,
     "role_name": editrolename.value,
     "role_description": editroledesc.value,
-    "initialCheckObj": pendingPermissionKeys.value,
+    "initialCheckObj": init_menus.value,
     "checkObj": permissionTree.value?.getCheckedNodes(false, true)
   })
+  if (res.msg == '更新成功') {
+    ElMessage.success(res.msg)
+    EditGeneralDrawerRef.value?.close()
+    await fecthRoleData(currentPage.value, defaultCount.value)
+  }
+  else{
+    ElMessage.error(res.msg)
+  }
 }
 
 

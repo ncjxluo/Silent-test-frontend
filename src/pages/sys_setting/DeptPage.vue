@@ -10,6 +10,7 @@
     v-model:default-count="defaultCount"
     :total-count="totalCount"
     :search-keys="searchKeys"
+    :is_enable_selected="false"
     :is_enable="is_enable"
     @update:currentPage="changePage"
     @update:defaultCount="changeCount"
@@ -27,25 +28,6 @@
     </template>
   </general-table>
 
-<!--  <el-dialog v-model="dialogVisible" title="新增用户" width="500" draggable overflow>-->
-<!--    <el-form :model="form" label-width="auto" style="max-width: 600px">-->
-<!--      <el-form-item label="组织名">-->
-<!--        <el-input v-model="form.dept_name" />-->
-<!--      </el-form-item>-->
-<!--      <el-form-item label="是否启用">-->
-<!--        <el-radio-group v-model="form.status">-->
-<!--          <el-radio value="1" size="large">启用</el-radio>-->
-<!--          <el-radio value="0" size="large">禁用</el-radio>-->
-<!--        </el-radio-group>-->
-<!--      </el-form-item>-->
-<!--    </el-form>-->
-<!--    <template #footer>-->
-<!--      <div class="dialog-footer">-->
-<!--        <el-button @click="dialogVisible = false">取消</el-button>-->
-<!--        <el-button type="primary" @click="handleNew"> 确定 </el-button>-->
-<!--      </div>-->
-<!--    </template>-->
-<!--  </el-dialog>-->
   <general-dialog ref="GeneralDialogRef"
                   title='新增组织'
                   :width=500
@@ -206,8 +188,6 @@ const handleDelete = async (row: any) => {
 }
 
 const handleNew = async () => {
-  console.log('点击了新增部门-确认')
-  console.log(form)
   const res = await additionDept(form)
   if (res.msg == '新增成功') {
     ElMessage.success(res.msg)

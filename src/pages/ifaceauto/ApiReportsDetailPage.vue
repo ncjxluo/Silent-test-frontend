@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container" :style="{ height: h + 'px' }">
+  <div class="app-container">
     <el-card shadow="never" class="search-wrapper">
       <el-form :inline="true">
         <el-form-item prop="status" label="执行接口">
@@ -9,13 +9,28 @@
         </el-form-item>
         <el-form-item prop="status" label="执行状态">
           <el-select v-model="status_value" clearable placeholder="请选择状态" style="width: 240px">
-            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option
+              v-for="item in options"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item prop="phone" label="耗时">
           <el-input v-model="time_fromValue" placeholder="开始值" style="width: 120px" />
           <span class="separator"> to </span>
           <el-input v-model="time_toValue" placeholder="结束值" style="width: 120px" />
+        </el-form-item>
+        <el-form-item prop="phone" label="条件">
+          <el-tooltip
+            class="box-item"
+            effect="dark"
+            content="模糊搜索步骤中是否包含条件的case"
+            placement="top-start"
+          >
+              <el-input v-model="fuzzy_search" placeholder="模糊搜索内容" style="width: 120px" />
+          </el-tooltip>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="searchClick"> 查询 </el-button>
@@ -31,7 +46,7 @@
         <div class="operation-wrapper">
           <el-tooltip content="下载">
             <el-tooltip content="下载" placement="top-start">
-              <el-dropdown  @command="handleCommand">
+              <el-dropdown @command="handleCommand">
                 <el-button type="primary" :icon="Download" circle />
                 <template #dropdown>
                   <el-dropdown-menu>
@@ -53,7 +68,7 @@
           border
           preserve-expanded-content
           style="width: 100%"
-          max-height="500px"
+          :max-height="`calc(100vh - 300px)`"
           v-loading="loading"
           element-loading-text="正在加载中..."
         >
@@ -127,13 +142,13 @@
                     :tooltip-formatter="fromatter_data"
                   />
                   <el-table-column
-                    label="结构断言详情"
+                    label="Apdex"
                     prop="assert_time_sign"
                     width="240"
                     show-overflow-tooltip
                     :tooltip-formatter="fromatter_data"
                   />
-<!--                  <el-table-column label="备注" prop="remarks" />-->
+                  <!--                  <el-table-column label="备注" prop="remarks" />-->
                   <el-table-column fixed="right" label="操作" width="150" align="center">
                     <template #default="scope">
                       <el-button
@@ -151,7 +166,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="执行状态" prop="case_status">
+          <el-table-column label="执行状态" prop="case_status" width="100">
             <template #default="scope">
               <el-tag
                 v-if="scope.row.case_status === 'fail'"
@@ -166,28 +181,38 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="执行case" prop="case_key" />
+          <el-table-column label="执行case" prop="case_key" width="200" show-overflow-tooltip />
           <el-table-column label="sql语句" width="600" v-if="showColumn" prop="sql" />
-          <el-table-column label="备注"  width="130" >
+          <el-table-column label="失败步骤信息" show-overflow-tooltip>
+            <template #default="props">
+<!--              <span style="color: #f56c6c">{{ getFailStepInfo(props.row) }}</span>-->
+                  <span
+                    :style="{
+                      color: getFailStepInfo(props.row).status === 'success' ? '#67c23a' : // 无失败：绿色（Element 成功色）
+                             getFailStepInfo(props.row).status === 'error' ? '#f56c6c' :   // 有失败：红色（Element 危险色）
+                             '#909399' // 无步骤：灰色（Element 默认色）
+                    }"
+                  >
+                    {{ getFailStepInfo(props.row).text }}
+                  </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="bug标记" width="130">
             <template #default="scope">
               <el-select
                 v-model="scope.row.remarks"
                 placeholder=""
                 size="small"
-                style="width: 100px;"
-              ><el-option label="无异常" value="无异常" />
-              <el-option label="存在误报" value="存在误报" />
-              <el-option label="确有异常" value="确认异常" />
+                style="width: 100px"
+                @change="editCase(scope.row)"
+                ><el-option label="无异常" value="无异常" />
+                <el-option label="存在误报" value="存在误报" />
+                <el-option label="语句错误" value="语句错误" />
+                <el-option label="权限错误" value="权限错误" />
+                <el-option label="上下文错误" value="上下文错误" />
+                <el-option label="确有异常" value="确认异常" />
+                <el-option label="应已修复" value="应已修复" />
               </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column fixed="right" label="操作" width="100" align="center">
-            <template #default="scope">
-              <el-button type="primary" text bg size="small"
-                         @click="editCase(scope.row)"
-              >
-                编辑case
-              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -257,7 +282,6 @@ import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
-import { edit_api_cases } from '@/api/ifaceauto.ts'
 
 const route = useRoute()
 
@@ -276,9 +300,9 @@ const { fetchCases, fetchPathSelect, editorCase } = api_reports()
 const suite_key = route.params.suite_key as string
 const plan_key = route.params.plan_key as string
 
-const windowHeight = window.innerHeight || document.body.clientHeight
-
-const h = windowHeight - 64 - 44 - 80
+// const windowHeight = window.innerHeight || document.body.clientHeight
+//
+// const h = windowHeight - 64 - 44 - 80
 
 const showColumn = ref(false)
 
@@ -289,6 +313,7 @@ const path_select = ref('')
 const status_value = ref('')
 const time_fromValue = ref('')
 const time_toValue = ref('')
+const fuzzy_search = ref('')
 
 const options = [
   {
@@ -360,6 +385,7 @@ const fecthCasesData = async (
   status_value: any = null,
   time_fromValue: any = null,
   time_toValue: any = null,
+  fuzzy_search: any = null,
 ) => {
   loading.value = true
   let result = await fetchCases({
@@ -371,6 +397,7 @@ const fecthCasesData = async (
     status: status_value,
     s_time: time_fromValue,
     e_time: time_toValue,
+    fuzzy_search: fuzzy_search,
   })
   const allEmpty = result.cases.every((item: { sql: string }) => !item.sql)
   if (!allEmpty) {
@@ -401,6 +428,7 @@ const handleSizeChange = async (val: number) => {
     status_value.value,
     time_fromValue.value,
     time_toValue.value,
+    fuzzy_search.value,
   )
 }
 
@@ -415,6 +443,7 @@ const handleCurrentChange = async (val: number) => {
     status_value.value,
     time_fromValue.value,
     time_toValue.value,
+    fuzzy_search.value,
   )
 }
 
@@ -443,6 +472,7 @@ const resetClick = () => {
   status_value.value = ''
   time_fromValue.value = ''
   time_toValue.value = ''
+  fuzzy_search.value = ''
 }
 
 const searchClick = async () => {
@@ -455,6 +485,7 @@ const searchClick = async () => {
     status_value.value,
     time_fromValue.value,
     time_toValue.value,
+    fuzzy_search.value,
   )
 }
 
@@ -469,7 +500,7 @@ const viewDetails = (obj: any) => {
   assertDetails.value = JSON.parse(obj.assert_res_details.replace('详情:', ''))
 }
 
-const handleCommand = (c:any) => {
+const handleCommand = (c: any) => {
   switch (c) {
     case 'allPage':
       currentAllDatas()
@@ -520,34 +551,33 @@ const currentAllDatas = async () => {
 
     resultData.forEach((caseData: CaseDatas, index: number) => {
       exportData.push({
-        '类型': '用例概览',
-        '用例': caseData.case_key,
-        '用例状态': caseData.case_status,
-        'SQL': caseData.sql
+        类型: '用例概览',
+        用例: caseData.case_key,
+        用例状态: caseData.case_status,
+        SQL: caseData.sql,
       })
 
       if (caseData.child_item && caseData.child_item.length > 0) {
-        caseData.child_item.forEach(child => {
+        caseData.child_item.forEach((child) => {
           exportData.push({
-            '类型': '步骤',
-            '步骤ID': child.step_id,
-            '步骤名称': child.step_name,
-            '用户变量':  truncateText(child.user_variables,5000),
-            '请求URL': child.request_url,
-            '请求参数': truncateText(child.request_param,5000),
-            '实际响应': truncateText(child.real_response,10000),
-            '响应时间': child.response_time,
-            '断言结果标记': truncateText(child.assert_res_sign,1000),
-            '断言详情': truncateText(child.assert_res_details,1000),
-            '断言验证标记': child.assert_ver_sign,
-            '断言时间标记': child.assert_time_sign
+            类型: '步骤',
+            步骤ID: child.step_id,
+            步骤名称: child.step_name,
+            用户变量: truncateText(child.user_variables, 5000),
+            请求URL: child.request_url,
+            请求参数: truncateText(child.request_param, 5000),
+            实际响应: truncateText(child.real_response, 10000),
+            响应时间: child.response_time,
+            断言结果标记: truncateText(child.assert_res_sign, 1000),
+            断言详情: truncateText(child.assert_res_details, 1000),
+            断言验证标记: child.assert_ver_sign,
+            断言时间标记: child.assert_time_sign,
           })
         })
       }
       if (index < resultData.length - 1) {
         exportData.push({}) // 空行
       }
-
     })
 
     const worksheet = XLSX.utils.json_to_sheet(exportData)
@@ -555,14 +585,14 @@ const currentAllDatas = async () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'sheet1')
     const excelBuffer = XLSX.write(workbook, {
       bookType: 'xlsx',
-      type: 'array'
+      type: 'array',
     })
     const blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
     const date = new Date()
     saveAs(blob, `${date.toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`)
-    ElMessage.success("导出成功")
+    ElMessage.success('导出成功')
   } catch (e) {
     console.log(e)
     ElMessage.error('导出失败')
@@ -573,16 +603,16 @@ const currentPageDatas = () => {
   try {
     const table = document.querySelector('.el-table')
     if (!table) {
-      console.error('未找到 .el-table 元素');
-      return;
+      console.error('未找到 .el-table 元素')
+      return
     }
     const clonedTable = table.cloneNode(true) as Element
     const allCells = clonedTable.querySelectorAll('td, th')
-    allCells.forEach(cell => {
+    allCells.forEach((cell) => {
       if (cell.textContent.length > 30000) {
         cell.textContent = cell.textContent.substring(0, 30000) + '...（内容过长已截断）'
       }
-    });
+    })
     const worksheet = XLSX.utils.table_to_sheet(clonedTable)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'sheet1')
@@ -608,16 +638,16 @@ const truncateText = (text: string | undefined, maxLength: number = 1000): strin
   return text.substring(0, maxLength) + '...（已截断）'
 }
 
-const editCase = async (row:any) => {
+const editCase = async (row: any) => {
   console.log(suite_key)
   console.log(plan_key)
   console.log(row.remarks)
   console.log(row)
   const res = await editorCase({
-    "suite_key": suite_key,
-    "plan_key": plan_key,
-    "case_key": row.case_key,
-    "remarks": row.remarks
+    suite_key: suite_key,
+    plan_key: plan_key,
+    case_key: row.case_key,
+    remarks: row.remarks,
   })
   if (res.msg == '更新成功') {
     await fecthCasesData(
@@ -629,15 +659,50 @@ const editCase = async (row:any) => {
       status_value.value,
       time_fromValue.value,
       time_toValue.value,
+      fuzzy_search.value,
     )
     ElMessage.success(res.msg)
-  }else {
+  } else {
     ElMessage.error(res.msg)
   }
-
-
 }
 
+// const editRemarks = async (row:any) => {
+//   console.log(row)
+// }
+
+// const test = async (row:any) => {
+//   console.log(row.case_key)
+// }
+
+
+const getFailStepInfo = (parentRow:any) => {
+  console.log(parentRow)
+  if (!parentRow || !parentRow.child_item || parentRow.child_item.length === 0) {
+    return {
+      text: '无步骤信息',
+      status: 'default',
+    }
+  }
+  const failSteps = parentRow.child_item.filter((step: any) => {
+    return (
+      step.assert_res_sign === '整体断言:失败'
+    )
+  })
+  if (failSteps.length === 0) {
+    return {
+      text: '无失败步骤',
+      status: 'success',
+    }
+  }
+  const failStepDetails = failSteps
+    .map((step: any) => `步骤${step.step_id}：${step.assert_res_details || '执行失败'}`)
+    .join('；')
+  return {
+    text: failStepDetails,
+    status: 'error'
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -665,11 +730,23 @@ const editCase = async (row:any) => {
 
 .table-wrapper {
   margin-bottom: 20px;
+  overflow: auto; // 表格内容超出时内部滚动
+  max-height: calc(100vh - 350px);
 }
 
+/*
 .pager-wrapper {
   display: flex;
   justify-content: flex-end;
+}
+*/
+.pager-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 5px;
+  position: relative;
+  z-index: 10;
+  margin-bottom: 10px;
 }
 
 .separator {
@@ -711,5 +788,14 @@ const editCase = async (row:any) => {
 
 :deep(.status-row) {
   background-color: #fef0f0 !important;
+}
+
+.app-container {
+  height: 100%;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  overflow-y: auto; // 整个页面内容超出时可滚动
+
 }
 </style>

@@ -5,6 +5,7 @@ import {
   get_api_cases_statistic,
   get_api_path_select,
   edit_api_cases,
+  submit_zentao
 } from '@/api/ifaceauto.ts'
 
 
@@ -40,5 +41,10 @@ export const api_reports = () => {
     return res.data.data
   }
 
-  return { fetchSuites, fetchPlans, fetchCases_statistic, fetchCases, fetchPathSelect, editorCase }
+  const submitZentao = async (data: any) => {
+    const res = await submit_zentao(data)
+    return res.data.data
+  }
+
+  return { fetchSuites, fetchPlans, fetchCases_statistic, fetchCases, fetchPathSelect, editorCase, submitZentao }
 }

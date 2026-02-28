@@ -1,5 +1,5 @@
 <template>
-  <el-container class="bg-white rounded bl-2" :style="{ height: (h + 'px') }">
+  <el-container class="bg-white rounded bl-2 page-container">
     <el-aside width="320px" class="image-aside">
       <div class="flex justify-between mb-4 ">
         <span class="mr-4">测试任务</span>
@@ -10,7 +10,7 @@
           inactive-text="手动更新"
         />
       </div>
-      <div class="top">
+      <div class="top scroll-container">
         <div class="demo-collapse-position">
           <el-collapse :expand-icon-position="position">
             <el-collapse-item :title="date" v-for="(suites, date) in grouped" :key="date">
@@ -42,14 +42,11 @@
     <el-main class="image-main">
       <el-card shadow="never" class="search-wrapper">
         <el-form ref="searchFormRef" :inline="true">
-          <el-form-item prop="username" label="测试计划名">
-            <el-input placeholder="请输入" />
-          </el-form-item>
-          <el-form-item prop="phone" label="创建时间">
-            <el-input placeholder="请输入" />
+          <el-form-item label="测试计划名">
+            <el-input v-model="plan_name" placeholder="请输入" />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :icon="Search">
+            <el-button type="primary" :icon="Search" @click="searchClick">
               查询
             </el-button>
             <el-button :icon="Refresh">
@@ -73,7 +70,7 @@
           </div>
         </div>
         <div class="table-wrapper">
-          <el-table :data="filterTableData">
+          <el-table :data="filterTableData" style="width: 100%" :max-height="`calc(100vh - 320px)`" border>
             <el-table-column prop="plan_name" label="测试计划名" align="center" />
             <el-table-column prop="status" label="计划状态" align="center" />
             <el-table-column prop="plan_task_sum" label="测试计划总数" align="center" />
@@ -92,15 +89,22 @@
             <el-table-column prop="updated_at" label="完成时间" align="center" />
             <el-table-column fixed="right" label="操作" width="300" align="center">
               <template #default="scope">
-                <el-button type="primary" text bg size="small" @click="detailClick(scope.row.suite_key, scope.row.plan_key)">
+                <el-button type="primary" text bg size="small" @click="detailClick(scope.row.suite_key, scope.row.plan_key, scope.row.plan_name)">
                   执行详情
                 </el-button>
                 <el-button type="primary" text bg size="small" @click="reportClick(scope.row.suite_key, scope.row.plan_key)">
                   性能报告
                 </el-button>
-                <el-button type="primary" text bg size="small">
-                  对比分析
-                </el-button>
+                <el-tooltip
+                  class="box-item"
+                  effect="dark"
+                  content="将本计划下所有失败的case,提交到禅道中"
+                  placement="top-start"
+                >
+                  <el-button type="primary" disabled text bg size="small" @click="submit_zentao(scope.row.suite_key, scope.row.plan_key)">
+                    提交禅道
+                  </el-button>
+                </el-tooltip>
               </template>
             </el-table-column>
           </el-table>
@@ -165,12 +169,13 @@ const windowHeight = window.innerHeight || document.body.clientHeight
 const h = windowHeight - 64 - 44 - 80
 
 const dialogTableVisible = ref(false)
+const plan_name = ref('')
 
 const tableheader = () => {
   return 'table-header'
 }
 
-const { fetchSuites, fetchPlans, fetchCases_statistic } = api_reports()
+const { fetchSuites, fetchPlans, fetchCases_statistic, submitZentao } = api_reports()
 const router = useRouter()
 const search = ref('')
 
@@ -255,7 +260,7 @@ onMounted(
       let firstKey = Object.keys(grouped.value)[0] as string | undefined
       let key = grouped.value[firstKey ?? "1"]?.[0]?.suite_key as string
       suite_key.value = key
-      await fecthData(suite_key.value, 1, defaultCount.value)
+      await fecthData(suite_key.value, 1, defaultCount.value,plan_name.value)
       if (autoUpdate.value) {
         startAutoUpdate()
       }
@@ -272,29 +277,30 @@ onBeforeUnmount(() => {
 const handleSuiteClick = async (k: string) => {
   suite_key.value = k
   currentPage.value = 1
-  await fecthData(suite_key.value, currentPage.value, defaultCount.value)
+  await fecthData(suite_key.value, currentPage.value, defaultCount.value,plan_name.value)
 }
 
 const handleSizeChange = async (val: number) => {
-  await fecthData(suite_key.value, 1, defaultCount.value)
+  await fecthData(suite_key.value, 1, defaultCount.value,plan_name.value)
 }
 
 const handleCurrentChange = async (val: number) => {
-  await fecthData(suite_key.value, currentPage.value, defaultCount.value)
+  await fecthData(suite_key.value, currentPage.value, defaultCount.value,plan_name.value)
 }
 
-const fecthData = async (s_keys: string, page: number, size: number) => {
+const fecthData = async (s_keys: string, page: number, size: number, plan_name: string) => {
   let result: Plans = await fetchPlans({
     "suite_key": s_keys,
     "current_page": page,
-    "current_count": size
+    "current_count": size,
+    "plan_name": plan_name
   })
   totalCount.value = result.total_count
   planDatas.value = result.plans
 }
 
-const detailClick = (suite_key: string, plan_key: string) => {
-  router.push({ name: "apireportdetail", params: { suite_key: suite_key, plan_key: plan_key } })
+const detailClick = (suite_key: string, plan_key: string, plan_name: string) => {
+  router.push({ name: "apireportdetail", params: { suite_key: suite_key, plan_key: plan_key, plan_name: plan_name } })
 }
 
 const reportClick = async (suite_key: string, plan_key: string) => {
@@ -331,7 +337,7 @@ const startAutoUpdate = async () => {
 
   timer = setInterval(async () => {
     grouped.value = await fetchSuites()
-    await fecthData(suite_key.value, currentPage.value, defaultCount.value)
+    await fecthData(suite_key.value, currentPage.value, defaultCount.value, plan_name.value)
   }, frequency)
 }
 
@@ -363,75 +369,95 @@ const getTagType = (row:any) => {
   return rate === 100 ? 'success' : 'danger';
 };
 
+const submit_zentao = async (suite_key: string, plan_key: string) => {
+  console.log(suite_key)
+  console.log(plan_key)
+  await submitZentao({"suite_key":suite_key, "plan_key": plan_key})
+}
+
+const searchClick = async () => {
+  await fecthData(
+    suite_key.value,
+    currentPage.value,
+    defaultCount.value,
+    plan_name.value
+  )
+}
+
 </script>
 
+
 <style scoped>
+/* 核心：根容器整体滚动，和详情页完全一致 */
+.page-container {
+  height: 100%;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  display: flex; /* 仅保留flex让侧边栏和主内容并排，移除其他强制布局 */
+}
+
 .image-header {
   border-bottom: 1px solid #eeeeee;
   @apply flex items-center;
 }
 
+/* 侧边栏：仅基础样式，无flex强制占高 */
 .image-aside {
   border-right: 1px solid #eeeeee;
-  position: relative;
+  padding: 0 8px;
+  box-sizing: border-box;
+  width: 320px; /* 固定宽度，避免flex挤压 */
 }
 
-.image-main {
-  position: relative;
-}
-
+/* 侧边栏滚动容器：适配根容器整体滚动，高度=视口高度-头部/底部 */
 .image-aside .top {
-  position: absolute;
-  top: 50px;
-  right: 0;
-  left: 0;
-  bottom: 50px;
-  overflow-y: auto;
+  overflow-y: visible;
+  height: auto;
+  margin-top: 10px;
 }
 
-.image-main .top {
-  position: absolute;
-  top: 100px;
-  right: 0;
-  left: 0;
-  bottom: 50px;
-  overflow-y: auto;
-}
-
-.image-aside .bottom, .image-main .bottom {
-  position: absolute;
-  bottom: 0;
+/* 侧边栏底部：自然流布局 */
+.image-aside .bottom {
   height: 50px;
-  left: 0;
-  right: 0;
   @apply flex items-center justify-center;
+  margin-top: 10px;
+  margin-bottom: 20px; /* 增加底距，避免贴底 */
 }
+
+/* 【关键修复】主内容区：删除所有flex/height强制布局，恢复自然流 */
+.image-main {
+  padding: 0 16px;
+  box-sizing: border-box;
+  flex: 1; /* 仅占剩余宽度，无高度限制 */
+}
+
+/* 【删除无用样式】main-card已不存在，直接删除 */
+/* .main-card { ... } */
 
 .suite-panel {
   margin-bottom: 6px;
   cursor: default;
 }
 
-/* 核心修复：进度容器 - 圆角与边框完全对齐 */
+/* 进度条样式保留，无修改 */
 .progress-container {
   position: relative;
   padding: 5px;
-  border-radius: 6px; /* 容器圆角 */
+  border-radius: 6px;
   background: #fafafa;
   overflow: hidden;
 }
-
-/* 修复：环形进度条 - 圆角衔接关键样式 */
 .circular-progress {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  border-radius: 6px; /* 与容器圆角一致 */
+  border-radius: 6px;
   pointer-events: none;
 }
-
 .circular-progress::before {
   content: '';
   position: absolute;
@@ -451,36 +477,28 @@ const getTagType = (row:any) => {
   background-clip: content-box, border-box;
   background-origin: content-box, border-box;
   background-image:
-    linear-gradient(#fafafa, #fafafa), /* 中间透明部分（与容器背景一致） */
+    linear-gradient(#fafafa, #fafafa),
     conic-gradient(from -90deg, var(--progress-color) var(--progress), transparent var(--progress));
   transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
-
-/* 进度 0%：灰色边框 */
 .progress-zero .progress-container {
   background: #fafafa;
 }
 .progress-zero .circular-progress::before {
   --progress-color: #ebeef5;
-  /* 0% 时显示完整灰色边框 */
   background-image:
     linear-gradient(#fafafa, #fafafa),
     linear-gradient(#ebeef5, #ebeef5);
 }
-
-/* 进度 100%：绿色边框 + 成功背景 */
 .progress-complete .progress-container {
   background: #f0f9ff;
 }
 .progress-complete .circular-progress::before {
   --progress-color: #409EFF;
-  /* 100% 时显示完整绿色边框 */
   background-image:
     linear-gradient(#f0f7ff, #f0f7ff),
     linear-gradient(#409EFF, #409EFF);
 }
-
-/* 进度中：蓝色边框 + 呼吸动画 */
 .progress-loading .progress-container {
   background: #f0f7ff;
 }
@@ -488,15 +506,12 @@ const getTagType = (row:any) => {
   --progress-color: #409EFF;
   animation: pulse 2s infinite;
 }
-
-/* 呼吸动画优化：不影响圆角 */
 @keyframes pulse {
   0% { opacity: 1; }
   50% { opacity: 0.7; }
   100% { opacity: 1; }
 }
 
-/* 内部内容布局 */
 .suite-content {
   position: relative;
   display: flex;
@@ -504,7 +519,6 @@ const getTagType = (row:any) => {
   align-items: center;
   width: 100%;
 }
-
 .suite-name {
   color: #409eff;
   font-weight: 500;
@@ -514,12 +528,10 @@ const getTagType = (row:any) => {
   text-overflow: ellipsis;
   margin-right: 8px;
 }
-
 .suite-name:hover {
   text-decoration: underline;
   color: #409EFF;
 }
-
 .suite-status {
   display: flex;
   border-radius: 12px;
@@ -529,17 +541,14 @@ const getTagType = (row:any) => {
   padding: 2px 8px;
   white-space: nowrap;
 }
-
 .progress-complete .suite-status {
   background: #f0f9f0;
   color: #67C23A;
 }
-
 .progress-zero .suite-status {
   background: #f5f5f5;
   color: #909399;
 }
-
 .progress-loading .suite-status {
   background: #e8f4f8;
   color: #409EFF;
@@ -557,25 +566,32 @@ const getTagType = (row:any) => {
   @apply bg-gray-200 text-dark-200
 }
 
+/* 搜索栏/工具栏样式保留 */
 .search-wrapper {
   margin-bottom: 20px;
   :deep(.el-card__body) {
     padding-bottom: 2px;
   }
 }
-
 .toolbar-wrapper {
   display: flex;
   justify-content: space-between;
   margin-bottom: 20px;
 }
 
+/* 表格容器：仅保留margin和overflow，无height/flex限制 */
 .table-wrapper {
-  margin-bottom: 20px;
+  margin-bottom: 20px; /* 增加底距，确保和翻页组件分离 */
+  overflow: auto;
+  max-height: calc(100vh - 380px);
 }
 
+/* 翻页组件：自然流布局，增加底距避免贴底 */
 .pager-wrapper {
   display: flex;
   justify-content: flex-end;
+  margin-bottom: 20px; /* 关键：增加底距，确保可见 */
+  position: relative;
+  z-index: 10;
 }
 </style>

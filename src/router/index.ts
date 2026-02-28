@@ -5,10 +5,8 @@ import LoginPage from '@/pages/login/LoginPage.vue'
 import AdminPage from '@/layouts/AdminPage.vue'
 import { useAuthStore } from '@/stores/auth'
 import { showFullLoading,hideFullLoading } from '@/utils/util.ts'
-import type { AsyncRoute } from '@/types/async_routes.ts'
 import type { MenuItem } from '@/types/menu_type.ts'
 import { useMenu } from '@/hooks/useMenu.ts'
-import { h } from 'vue'
 
 
 const routers:RouteRecordRaw[] = [
@@ -50,6 +48,7 @@ export const router:Router= createRouter(
 function generateRoutesFromMenus(menuTree:MenuItem[]):RouteRecordRaw[]{
   const asyncRoutes: RouteRecordRaw[] = []
   menuTree.forEach(menu => {
+
     const routeConfig: RouteRecordRaw = {
       path: menu.menu_path || menu.menu_key,
       name: menu.menu_router_name || menu.menu_key,
@@ -61,6 +60,7 @@ function generateRoutesFromMenus(menuTree:MenuItem[]):RouteRecordRaw[]{
     if (menu.menu_component)
     {
       const componentPath = `/src/pages/${menu.menu_component}.vue`
+      console.log(componentPath)
       const component = modules[componentPath]
       if (component) {
         routeConfig.component = component

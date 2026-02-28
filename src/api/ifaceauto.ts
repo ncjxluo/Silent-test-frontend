@@ -23,3 +23,7 @@ export const get_api_path_select = (query = {} ) =>{
 export const edit_api_cases = (data = {}) =>{
   return service.post('/apireport/edit_api_cases',data)
 }
+
+export const submit_zentao = (data = {}) =>{
+  return service.post('/apireport/submit_zentao',data)
+}

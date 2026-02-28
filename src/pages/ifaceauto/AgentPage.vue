@@ -6,6 +6,7 @@
                 v-model:default-count="defaultCount"
                 :total-count="totalCount"
                 :search-keys="searchKeys"
+                :is_enable_selected="false"
                 :is_enable="is_enable"
                 @update:currentPage="test1"
                 @update:defaultCount="test2"

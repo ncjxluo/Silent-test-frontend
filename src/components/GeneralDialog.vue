@@ -8,7 +8,7 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="close">取消</el-button>
-        <el-button :type="btype" @click="handleSubmit"> {{ confirmText }} </el-button>
+        <el-button :type="btype" @click="handleSubmit" v-if="confirmText !== '0'"> {{ confirmText }} </el-button>
       </div>
     </template>
   </el-dialog>

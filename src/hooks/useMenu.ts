@@ -31,12 +31,12 @@ export const useMenu = () => {
     return tree
   }
 
-  const filterTree = (tree: MenuItem[]): MenuItem[] => {
+  const filterTree = (tree: MenuItem[], visible:number=0): MenuItem[] => {
     return tree
-      .filter(item => item.is_visible !== 0)
+      .filter(item => item.is_visible !== visible)
       .map(item => ({
         ...item,
-        children: item.children ? filterTree(item.children) : []
+        children: item.children ? filterTree(item.children, visible) : []
       }))
   }
 
