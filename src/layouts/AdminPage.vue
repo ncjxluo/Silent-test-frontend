@@ -10,7 +10,7 @@
         </el-header>
         <el-main style="padding: 0; flex: 1; overflow: hidden;">
             <tag-list-page :isCollapse="isCollapse"/>
-            <div class="content-wrapper" :style="{height: '100%',padding: '16px',boxSizing: 'border-box'}">
+            <div class="content-wrapper" :style="{height: '100%',padding: '0px',boxSizing: 'border-box'}">
               <router-view :key="route.fullPath"></router-view>
             </div>
         </el-main>

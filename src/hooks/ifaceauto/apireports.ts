@@ -5,7 +5,9 @@ import {
   get_api_cases_statistic,
   get_api_path_select,
   edit_api_cases,
-  submit_zentao
+  submit_zentao,
+  monitor_report,
+  download_jfr
 } from '@/api/ifaceauto.ts'
 
 
@@ -46,5 +48,15 @@ export const api_reports = () => {
     return res.data.data
   }
 
-  return { fetchSuites, fetchPlans, fetchCases_statistic, fetchCases, fetchPathSelect, editorCase, submitZentao }
+  const monitorReport = async (data: any) => {
+    const res = await monitor_report(data)
+    return res.data.data
+  }
+
+  const downloadJfr = async (query: any) => {
+    const res = await download_jfr(query)
+    return res.data
+  }
+
+  return { fetchSuites, fetchPlans, fetchCases_statistic, fetchCases, fetchPathSelect, editorCase, submitZentao, monitorReport, downloadJfr }
 }

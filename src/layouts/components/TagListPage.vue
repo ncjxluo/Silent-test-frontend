@@ -182,7 +182,7 @@ const getTabLabel = (tabItem: any) => {
   }
   if (tabItem.path.includes('/hostmanagement/shell')) {
     const { v_key, v_ip } = tabItem.params;
-    console.log('f' + v_ip);
+    // console.log('f' + v_ip);
     // 拼接标题，处理可选参数
     // let label = `${tabItem.title}（套件：${suite_key}，计划：${plan_key}）`;
     let label = tabItem.title
@@ -200,7 +200,6 @@ const getTabLabel = (tabItem: any) => {
 <style scoped>
 .f-tag-list {
   @apply fixed bg-gray-100 flex items-center px-2;
-
   right: 0;
   height: 44px;
   z-index: 100;

@@ -31,6 +31,7 @@ import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { onMounted, ref } from 'vue'
 import { config } from '@/utils/config.ts'
+import { stopHeartbeat } from '@/utils/util.ts'
 
 const authStore = useAuthStore()
 
@@ -69,6 +70,7 @@ const handleLogout = () => {
     cancelButtonText: '取消',
     type: 'warning',
   }).then(() => {
+    stopHeartbeat()
     authStore.logout()
   })
 }
@@ -90,6 +92,7 @@ const handleLogout = () => {
   width: 42px;
   height: 60px;
   cursor: pointer;
+  margin-left:10px;
 }
 
 .icon-btn:hover {

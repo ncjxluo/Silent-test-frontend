@@ -11,8 +11,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ApiEditor: typeof import('./src/components/ApiEditor.vue')['default']
+    GeneralCode: typeof import('./src/components/GeneralCode.vue')['default']
     GeneralDialog: typeof import('./src/components/GeneralDialog.vue')['default']
     GeneralDrawer: typeof import('./src/components/GeneralDrawer.vue')['default']
+    GeneralDynamicTable: typeof import('./src/components/GeneralDynamicTable.vue')['default']
+    GeneralDynamicTreeTable: typeof import('./src/components/GeneralDynamicTreeTable.vue')['default']
+    GeneralNestTable: typeof import('./src/components/GeneralNestTable.vue')['default']
     GeneralTable: typeof import('./src/components/GeneralTable.vue')['default']
     GeneralTree: typeof import('./src/components/GeneralTree.vue')['default']
     Placeholder: typeof import('./src/components/Placeholder.vue')['default']

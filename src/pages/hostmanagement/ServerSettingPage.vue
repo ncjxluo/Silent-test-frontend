@@ -33,7 +33,6 @@
                   <Monitor v-if="data.group_type === 'server'" />
                   <Folder v-else />
                 </el-icon>
-
                 <el-input
                   v-if="data.editing"
                   v-model="data.group_name"
@@ -138,11 +137,6 @@
       style="max-width: 600px"
     >
       <el-form-item label="虚拟机分组" v-if="dialog_action === '编辑'">
-<!--        <el-select placeholder="请选择虚机分组" class="w-full" clearable>-->
-<!--          <el-option label="研发" value="研发" />-->
-<!--          <el-option label="测试" value="测试" />-->
-<!--          <el-option label="产品" value="产品" />-->
-<!--        </el-select>-->
         <el-tree-select
           v-model="selected_group"
           :data="treeData"
@@ -693,7 +687,7 @@ const handleVerifySelected = async () => {
     const res: VerifyVirtualMachine = await verifyVirtualMachine({
       virtual_keys: selectedKyes,
     })
-    console.log(res)
+    // console.log(res)
     const hasFail: boolean = res.result.some((obj) => {
       const msg = Object.values(obj)[0]
       return typeof msg === 'string' && msg.startsWith('无法连接')
@@ -720,7 +714,6 @@ const handleEditor = async (row: any) => {
   dialog_title.value = '编辑虚拟机'
   dialog_button_text.value = '编辑'
   dialog_action.value = '编辑'
-  console.log(row)
   selected_group.value = row.group_key
   selected_key.value = row.virtual_key
   Object.assign(form.value, {
@@ -745,10 +738,10 @@ const {
   delServerGroup,
   addVirtualMachine,
   getVirtualMachine,
+  delVirtualMachine,
   verifyVirtualMachine,
   getVirtualMachineAllSearch,
-  delVirtualMachine,
-  editVirtualMachine,
+  editVirtualMachine
 } = serversetting()
 
 interface TreeNode {
@@ -964,7 +957,7 @@ const removeNode = async (group_key: string) => {
 }
 
 const handleConntion = (row: any) => {
-  console.log(row.virtual_ip_address)
+  // console.log(row.virtual_ip_address)
   router.push({ name: 'shell', params: { v_key: row.virtual_key, v_ip: row.virtual_ip_address } })
 }
 

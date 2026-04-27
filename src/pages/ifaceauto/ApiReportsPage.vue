@@ -1,7 +1,7 @@
 <template>
   <el-container class="bg-white rounded bl-2 page-container">
     <el-aside width="320px" class="image-aside">
-      <div class="flex justify-between mb-4 ">
+      <div class="flex justify-between mb-4 mt-5">
         <span class="mr-4">测试任务</span>
         <el-switch
           v-model="autoUpdate"
@@ -15,7 +15,7 @@
           <el-collapse :expand-icon-position="position">
             <el-collapse-item :title="date" v-for="(suites, date) in grouped" :key="date">
               <div
-                v-for="(suite,index) in suites"
+                v-for="(suite, index) in suites"
                 :key="suite.suite_key"
                 class="suite-panel"
                 :class="getProgressClass(suite.progress)"
@@ -25,7 +25,8 @@
                   <div class="circular-progress"></div>
                   <div class="suite-content">
                     <div class="suite-name" @click="handleSuiteClick(suite.suite_key)">
-                      {{ suites.length - index }} - {{ suite.suite_name }} | {{ suite.created_at }}
+                      {{ suites.length - index }} - {{ suite.suite_name }} |
+                      {{ gformatTime(suite.created_at) }}
                     </div>
                     <div class="suite-status">
                       {{ suite.status }}
@@ -46,11 +47,10 @@
             <el-input v-model="plan_name" placeholder="请输入" />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :icon="Search" @click="searchClick">
-              查询
-            </el-button>
-            <el-button :icon="Refresh">
-              重置
+            <el-button type="primary" :icon="Search" @click="searchClick"> 查询 </el-button>
+            <el-button :icon="Refresh"> 重置 </el-button>
+            <el-button type="primary" :icon="Aim" @click="twinsFlameClick">
+              查看飞行报告
             </el-button>
           </el-form-item>
         </el-form>
@@ -70,29 +70,52 @@
           </div>
         </div>
         <div class="table-wrapper">
-          <el-table :data="filterTableData" style="width: 100%" :max-height="`calc(100vh - 320px)`" border>
+          <el-table
+            :data="filterTableData"
+            style="width: 100%"
+            :max-height="`calc(100vh - 320px)`"
+            border
+          >
             <el-table-column prop="plan_name" label="测试计划名" align="center" />
             <el-table-column prop="status" label="计划状态" align="center" />
             <el-table-column prop="plan_task_sum" label="测试计划总数" align="center" />
+            <el-table-column prop="executed_case_num" label="已执行用例数" align="center" />
             <el-table-column prop="failed_case_num" label="失败case数" align="center" />
-            <el-table-column label="通过率" align="center" >
+            <el-table-column label="通过率" align="center">
               <template #default="scope">
-                <el-tag
-                  :type="getTagType(scope.row)"
-                  size="small"
-                >
+                <el-tag :type="getTagType(scope.row)" size="small">
                   {{ getPassRate(scope.row) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="created_at" label="创建时间" align="center" />
-            <el-table-column prop="updated_at" label="完成时间" align="center" />
+            <el-table-column prop="created_at" label="创建时间" align="center">
+              <template #default="scope">
+                {{ gformatTime(scope.row.created_at) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="updated_at" label="完成时间" align="center">
+              <template #default="scope">
+                {{ gformatTime(scope.row.updated_at) }}
+              </template>
+            </el-table-column>
             <el-table-column fixed="right" label="操作" width="300" align="center">
               <template #default="scope">
-                <el-button type="primary" text bg size="small" @click="detailClick(scope.row.suite_key, scope.row.plan_key, scope.row.plan_name)">
+                <el-button
+                  type="primary"
+                  text
+                  bg
+                  size="small"
+                  @click="detailClick(scope.row.suite_key, scope.row.plan_key, scope.row.plan_name)"
+                >
                   执行详情
                 </el-button>
-                <el-button type="primary" text bg size="small" @click="reportClick(scope.row.suite_key, scope.row.plan_key)">
+                <el-button
+                  type="primary"
+                  text
+                  bg
+                  size="small"
+                  @click="reportClick(scope.row.suite_key, scope.row.plan_key)"
+                >
                   性能报告
                 </el-button>
                 <el-tooltip
@@ -101,7 +124,14 @@
                   content="将本计划下所有失败的case,提交到禅道中"
                   placement="top-start"
                 >
-                  <el-button type="primary" disabled text bg size="small" @click="submit_zentao(scope.row.suite_key, scope.row.plan_key)">
+                  <el-button
+                    type="primary"
+                    disabled
+                    text
+                    bg
+                    size="small"
+                    @click="submit_zentao(scope.row.suite_key, scope.row.plan_key)"
+                  >
                     提交禅道
                   </el-button>
                 </el-tooltip>
@@ -152,15 +182,101 @@
       <el-table-column property="p99_response_time" label="99响应时间" />
     </el-table>
   </el-dialog>
+
+  <el-dialog
+    v-model="twinsFlameRef"
+    title="监控分析报告"
+    width="1400"
+    style="max-height: 700px"
+    :close-on-click-modal="false"
+    @opened="initCharts"
+  >
+    <div class="container">
+      <!-- 🔥 翻页控制 -->
+      <div class="toolbar">
+        <el-button @click="prev">⬅ 上一页</el-button>
+        <span class="time-range">
+          {{ gformatTime(currentStart) }} ~ {{ gformatTime(currentEnd) }}
+        </span>
+        <el-button @click="next">下一页 ➡</el-button>
+      </div>
+
+      <!-- 🔥 图表区域 -->
+      <div class="charts">
+        <div ref="cpuRef" class="chart"></div>
+        <div ref="memRef" class="chart"></div>
+        <div ref="lockRef" class="chart"></div>
+      </div>
+
+      <!-- 🔥 异常卡片 -->
+      <div class="alerts">
+        <div>异常事件</div>
+        <el-alert
+
+          type="info"
+          description="jfr文件需要下载后,通过JMC分析器分析"
+          show-icon
+        />
+        <el-table
+          :data="alerts"
+          style="width: 100%"
+          :max-height="`calc(100vh - 220px)`"
+          border
+        >
+          <el-table-column prop="container" label="容器" align="center" />
+          <el-table-column label="时间" align="center" >
+            <template #default="scope">
+              {{ gformatTime(scope.row.timestamp) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="type" label="触发事件" align="center" />
+          <el-table-column fixed="right" label="操作" width="300" align="center">
+            <template #default="scope">
+              <el-button
+                type="primary"
+                text
+                bg
+                size="small"
+                @click="download_jfr(scope.row.flameGraphUrl)"
+              >
+                下载
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+<!--        <el-card v-for="item in alerts" :key="item.id" class="alert-card">-->
+<!--          <div>容器：{{ item.container }}</div>-->
+<!--          <div>时间：{{ gformatTime(item.timestamp) }}</div>-->
+<!--          <div>CPU：{{ item.cpu }}</div>-->
+<!--          <div>MEM：{{ item.mem }}</div>-->
+<!--          <div>LOCK：{{ item.lock }}</div>-->
+<!--          <div>触发事件：{{ item.type }}</div>-->
+<!--          <el-button-->
+<!--            v-if="item.flameGraphUrl"-->
+<!--            type="danger"-->
+<!--            size="small"-->
+
+<!--          >-->
+<!--            下载 JFR-->
+<!--          </el-button>-->
+<!--        </el-card>-->
+<!--      </div>-->
+    </div>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, onBeforeUnmount } from 'vue'
-import { Search, Refresh, Download, RefreshRight } from '@element-plus/icons-vue'
+import { computed, onMounted, ref, watch, onBeforeUnmount, nextTick } from 'vue'
+import { Search, Refresh, Download, RefreshRight, Aim } from '@element-plus/icons-vue'
 import { api_reports } from '@/hooks/ifaceauto/apireports.ts'
 import { useRouter } from 'vue-router'
+// import { formatTime } from '@/utils/util.ts'
+import { gformatTime } from '@/utils/util.ts'
+import { config } from '@/utils/config.ts'
+import * as echarts from 'echarts'
 
-const frequency:number = 15000
+const frequency: number = 15000
 
 let timer: any = null
 
@@ -175,7 +291,7 @@ const tableheader = () => {
   return 'table-header'
 }
 
-const { fetchSuites, fetchPlans, fetchCases_statistic, submitZentao } = api_reports()
+const { fetchSuites, fetchPlans, fetchCases_statistic, submitZentao, monitorReport, downloadJfr } = api_reports()
 const router = useRouter()
 const search = ref('')
 
@@ -185,52 +301,53 @@ const currentPage = ref(1)
 const totalCount = ref(0)
 const autoUpdate = ref(true)
 
-
 interface SuiteItem {
-  suite_key: string;
-  suite_name: string;
-  status: string;
-  created_at: string | Date;
-  progress: string | "0";
+  suite_key: string
+  suite_name: string
+  status: string
+  created_at: number
+  updated_at: number
+  progress: string | '0'
 }
 
 interface PlanItem {
-  id: number;
-  suite_key: string;
-  plan_key: string;
-  plan_name: string;
-  plan_task_sum: number;
-  status: string;
-  created_at: string | Date;
-  updated_at: string | Date;
+  id: number
+  suite_key: string
+  plan_key: string
+  plan_name: string
+  plan_task_sum: number
+  executed_case_num: number
+  status: string
+  created_at: number
+  updated_at: number
 }
 
 interface Plans {
-  total_count: number;
-  plans: PlanItem[];
+  total_count: number
+  plans: PlanItem[]
 }
 
 interface CasesItem {
-  case_path: number;
-  request_count: string;
-  avg_response_time: string;
-  min_response_time: string;
-  max_response_time: string;
-  median: string;
-  p90_response_time: string;
-  p95_response_time: string;
-  p99_response_time: string;
+  case_path: number
+  request_count: string
+  avg_response_time: string
+  min_response_time: string
+  max_response_time: string
+  median: string
+  p90_response_time: string
+  p95_response_time: string
+  p99_response_time: string
 }
 
 interface CasesStatistics {
-  total_cases?: string;
-  success_cases?: string;
-  fail_cases?: string;
-  pass_rate_percent?: string;
-  case_statistic?: CasesItem[];
+  total_cases?: string
+  success_cases?: string
+  fail_cases?: string
+  pass_rate_percent?: string
+  case_statistic?: CasesItem[]
 }
 
-const suite_key = ref("")
+const suite_key = ref('')
 
 const grouped = ref<Record<string, SuiteItem[]>>({})
 
@@ -248,81 +365,92 @@ const filterTableData = computed(() =>
   planDatas.value.filter(
     (data) =>
       !search.value ||
-      data.plan_name.toLowerCase().includes(search.value.toLowerCase())
-      || data.status.toLowerCase().includes(search.value.toLowerCase())
-  )
+      data.plan_name.toLowerCase().includes(search.value.toLowerCase()) ||
+      data.status.toLowerCase().includes(search.value.toLowerCase()),
+  ),
 )
 
-onMounted(
-  async () => {
-    try {
-      grouped.value = await fetchSuites()
-      let firstKey = Object.keys(grouped.value)[0] as string | undefined
-      let key = grouped.value[firstKey ?? "1"]?.[0]?.suite_key as string
-      suite_key.value = key
-      await fecthData(suite_key.value, 1, defaultCount.value,plan_name.value)
-      if (autoUpdate.value) {
-        startAutoUpdate()
-      }
-    } catch (error) {
-      console.error('请求失败:', error)
+const baseUrl = ref('')
+
+onMounted(async () => {
+  // chartCpu.value = echarts.init(cpuRef.value)
+  // chartMem.value = echarts.init(memRef.value)
+  // chartLock.value = echarts.init(lockRef.value)
+  const conf = await config.getConfig()
+  baseUrl.value = conf.baseUrl
+  try {
+    grouped.value = await fetchSuites()
+    let firstKey = Object.keys(grouped.value)[0] as string | undefined
+    let key = grouped.value[firstKey ?? '1']?.[0]?.suite_key as string
+    suite_key.value = key
+    await fecthData(suite_key.value, 1, defaultCount.value, plan_name.value)
+    if (autoUpdate.value) {
+      startAutoUpdate()
     }
+  } catch (error) {
+    console.error('请求失败:', error)
   }
-)
+})
 
 onBeforeUnmount(() => {
   stopAutoUpdate()
+  chartCpu.value?.dispose()
+  chartMem.value?.dispose()
+  chartLock.value?.dispose()
 })
 
 const handleSuiteClick = async (k: string) => {
   suite_key.value = k
   currentPage.value = 1
-  await fecthData(suite_key.value, currentPage.value, defaultCount.value,plan_name.value)
+  await fecthData(suite_key.value, currentPage.value, defaultCount.value, plan_name.value)
 }
 
 const handleSizeChange = async (val: number) => {
-  await fecthData(suite_key.value, 1, defaultCount.value,plan_name.value)
+  await fecthData(suite_key.value, 1, defaultCount.value, plan_name.value)
 }
 
 const handleCurrentChange = async (val: number) => {
-  await fecthData(suite_key.value, currentPage.value, defaultCount.value,plan_name.value)
+  await fecthData(suite_key.value, currentPage.value, defaultCount.value, plan_name.value)
 }
 
 const fecthData = async (s_keys: string, page: number, size: number, plan_name: string) => {
   let result: Plans = await fetchPlans({
-    "suite_key": s_keys,
-    "current_page": page,
-    "current_count": size,
-    "plan_name": plan_name
+    suite_key: s_keys,
+    current_page: page,
+    current_count: size,
+    plan_name: plan_name,
   })
   totalCount.value = result.total_count
   planDatas.value = result.plans
 }
 
 const detailClick = (suite_key: string, plan_key: string, plan_name: string) => {
-  router.push({ name: "apireportdetail", params: { suite_key: suite_key, plan_key: plan_key, plan_name: plan_name } })
+  router.push({
+    name: 'apireportdetail',
+    params: { suite_key: suite_key, plan_key: plan_key, plan_name: plan_name },
+  })
 }
 
 const reportClick = async (suite_key: string, plan_key: string) => {
   dialogTableVisible.value = true
   let cases: CasesStatistics = await fetchCases_statistic({
-    "suite_key": suite_key,
-    "plan_key": plan_key
+    suite_key: suite_key,
+    plan_key: plan_key,
   })
   Object.assign(casesStatistics.value, {
     total_cases: cases.total_cases,
     success_cases: cases.success_cases,
     fail_cases: cases.fail_cases,
     pass_rate_percent: cases.pass_rate_percent,
-    case_statistic: cases.case_statistic
+    case_statistic: cases.case_statistic,
   })
 }
 
 const getProgressClass = (val: string) => {
-  if (val === "0") return 'progress-zero';
-  if (val === "100") return 'progress-complete';
-  return 'progress-loading';
-};
+  if (val === '0') return 'progress-zero'
+  if (val === '100') return 'progress-complete'
+  return 'progress-loading'
+}
 
 watch(autoUpdate, (newVal) => {
   if (newVal) {
@@ -348,44 +476,249 @@ const stopAutoUpdate = () => {
   }
 }
 
-const getPassRate = (row:any) => {
-  const { plan_task_sum, failed_case_num } = row;
+const getPassRate = (row: any) => {
+  const { plan_task_sum, failed_case_num } = row
   if (plan_task_sum === 0) {
-    return '暂无数据';
+    return '暂无数据'
   }
-  const passNum = Math.max(0, plan_task_sum - failed_case_num);
-  const rate = (passNum / plan_task_sum) * 100;
-  return `${rate.toFixed(2)}%`;
-};
+  const passNum = Math.max(0, plan_task_sum - failed_case_num)
+  const rate = (passNum / plan_task_sum) * 100
+  return `${rate.toFixed(2)}%`
+}
 
-const getTagType = (row:any) => {
-  const { plan_task_sum, failed_case_num } = row;
+const getTagType = (row: any) => {
+  const { plan_task_sum, failed_case_num } = row
   if (plan_task_sum === 0) {
-    return 'info'; // 暂无数据用蓝色
+    return 'info' // 暂无数据用蓝色
   }
-  const passNum = Math.max(0, plan_task_sum - failed_case_num);
-  const rate = (passNum / plan_task_sum) * 100;
+  const passNum = Math.max(0, plan_task_sum - failed_case_num)
+  const rate = (passNum / plan_task_sum) * 100
   // 自定义阈值：≥90%为绿色，否则为红色（可根据需求调整）
-  return rate === 100 ? 'success' : 'danger';
-};
+  return rate === 100 ? 'success' : 'danger'
+}
 
 const submit_zentao = async (suite_key: string, plan_key: string) => {
   console.log(suite_key)
   console.log(plan_key)
-  await submitZentao({"suite_key":suite_key, "plan_key": plan_key})
+  await submitZentao({ suite_key: suite_key, plan_key: plan_key })
 }
 
 const searchClick = async () => {
-  await fecthData(
-    suite_key.value,
-    currentPage.value,
-    defaultCount.value,
-    plan_name.value
-  )
+  await fecthData(suite_key.value, currentPage.value, defaultCount.value, plan_name.value)
+}
+// ----------------------------------------------------------------------------------------------------
+const twinsFlameRef = ref(false)
+
+const current_suite_item = ref<SuiteItem>()
+
+type MonitorItem = {
+  timestamp: number
+  container: string
+  cpu: number
+  mem: number
+  io: number
+  lock: number
+  hasAlert: boolean
+  flameGraphUrl?: string
 }
 
-</script>
+type AlertItem = {
+  id: string
+  timestamp: number
+  container: string
+  cpu: number
+  mem: number
+  io: number
+  lock: number
+  type: string
+  flameGraphUrl?: string
+}
 
+const cpuRef = ref()
+const memRef = ref()
+const lockRef = ref()
+
+const chartCpu = ref()
+const chartMem = ref()
+const chartLock = ref()
+
+const WINDOW = 30 * 60 * 1000
+const currentStart = ref(current_suite_item.value?.created_at || 0)
+const currentEnd = computed(() => currentStart.value + WINDOW)
+
+const rawData = ref<MonitorItem[]>([])
+
+const alerts = ref<AlertItem[]>([])
+
+watch(
+  () => current_suite_item.value,
+  (suite) => {
+    if (suite?.created_at) {
+      currentStart.value = suite.created_at
+    }
+  },
+  { immediate: true },
+)
+
+const initCharts = () => {
+  if (!chartCpu.value) {
+    chartCpu.value = echarts.init(cpuRef.value)
+    chartMem.value = echarts.init(memRef.value)
+    chartLock.value = echarts.init(lockRef.value)
+  }
+
+  setTimeout(() => {
+    chartCpu.value.resize()
+    chartMem.value.resize()
+    chartLock.value.resize()
+  })
+}
+
+const prev = () => {
+  if (!current_suite_item.value) return
+  if (currentStart.value - WINDOW >= current_suite_item.value!.created_at) {
+    currentStart.value -= WINDOW
+  }
+}
+
+const next = () => {
+  if (currentEnd.value + WINDOW <= current_suite_item.value!.updated_at) {
+    currentStart.value += WINDOW
+  }
+}
+
+const windowData = computed(() => {
+  return rawData.value.filter(
+    (i: any) => i.timestamp >= currentStart.value && i.timestamp <= currentEnd.value,
+  )
+})
+
+const m_grouped = computed(() => {
+  const map: Record<string, any[]> = {}
+
+  windowData.value.forEach((i: any) => {
+    const key = i.container ?? 'unknown'
+    if (!map[key]) map[key] = []
+    map[key].push(i)
+  })
+
+  return map
+})
+
+const buildSeries = (key: 'cpu' | 'mem' | 'lock') => {
+  return Object.entries(m_grouped.value).map(([name, list]) => ({
+    name,
+    type: 'line',
+    smooth: true,
+    data: list.map((i) => [i.timestamp, i[key]]),
+    markPoint: {
+      symbol: 'circle',
+      symbolSize: 10,
+
+      data: list
+        .filter(i => i.hasAlert)
+        .map(i => ({
+          name: '异常',
+          value: i[key],
+          xAxis: i.timestamp,
+          yAxis: i[key],
+          itemStyle: { color: 'red' }
+        }))
+    }
+  }))
+}
+
+const twinsFlameClick = async () => {
+  // console.log(timestamp)
+  twinsFlameRef.value = true
+  const suite = Object.values(grouped.value)
+    .flat()
+    .find((i) => i.suite_key === suite_key.value)
+  if (!suite) return
+  current_suite_item.value = suite
+  const end: number = suite.status === 'finish' ? suite.updated_at : Date.now()
+  const res = await open_monitoring(suite.created_at, end)
+  rawData.value = normalize(res.metrics).sort((a, b) => a.timestamp - b.timestamp)
+  alerts.value = res.alerts
+}
+
+const normalize = (list: any[]): MonitorItem[] => {
+  return list.map((i) => ({
+    timestamp: i.timestamp,
+    container: i.container,
+    cpu: i.cpu,
+    mem: i.mem,
+    io: i.io,
+    lock: i.lock,
+    hasAlert: i.alert?.has === 'true',
+    flameGraphUrl: i.alert?.flameGraphUrl !== '无' ? i.alert?.flameGraphUrl : undefined,
+  }))
+}
+
+const render = async () => {
+  if (!chartCpu.value) return
+  if (!windowData.value.length) return
+  await nextTick()
+  chartCpu.value.setOption({
+    title: { text: 'CPU' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'time' },
+    yAxis: { type: 'value' },
+    legend: {
+      type: 'scroll',
+      top: 0,
+    },
+    series: buildSeries('cpu'),
+  })
+
+  chartMem.value.setOption({
+    title: { text: 'MEM' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'time' },
+    yAxis: { type: 'value' },
+    legend: {
+      type: 'scroll',
+      top: 0,
+    },
+    series: buildSeries('mem'),
+  })
+
+  chartLock.value.setOption({
+    title: { text: 'LOCK' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'time' },
+    yAxis: { type: 'value' },
+    legend: {
+      type: 'scroll',
+      top: 0,
+    },
+    series: buildSeries('lock'),
+  })
+}
+
+watch(
+  windowData,
+  () => {
+    render()
+  },
+  { deep: true, immediate: true },
+)
+
+const open_monitoring = async (start_time: number, end_time: number) => {
+  return await monitorReport({
+    start_time: start_time,
+    end_time: end_time,
+  })
+  // console.log(res)
+  // return res.data.data
+}
+
+const flameUrl = ref('')
+
+const download_jfr = async (url: string) => {
+  window.open(`${baseUrl.value}api/v1/apireport/download_jfr?url=${url}`)
+}
+</script>
 
 <style scoped>
 /* 核心：根容器整体滚动，和详情页完全一致 */
@@ -486,30 +819,32 @@ const searchClick = async () => {
 }
 .progress-zero .circular-progress::before {
   --progress-color: #ebeef5;
-  background-image:
-    linear-gradient(#fafafa, #fafafa),
-    linear-gradient(#ebeef5, #ebeef5);
+  background-image: linear-gradient(#fafafa, #fafafa), linear-gradient(#ebeef5, #ebeef5);
 }
 .progress-complete .progress-container {
   background: #f0f9ff;
 }
 .progress-complete .circular-progress::before {
-  --progress-color: #409EFF;
-  background-image:
-    linear-gradient(#f0f7ff, #f0f7ff),
-    linear-gradient(#409EFF, #409EFF);
+  --progress-color: #409eff;
+  background-image: linear-gradient(#f0f7ff, #f0f7ff), linear-gradient(#409eff, #409eff);
 }
 .progress-loading .progress-container {
   background: #f0f7ff;
 }
 .progress-loading .circular-progress::before {
-  --progress-color: #409EFF;
+  --progress-color: #409eff;
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .suite-content {
@@ -530,7 +865,7 @@ const searchClick = async () => {
 }
 .suite-name:hover {
   text-decoration: underline;
-  color: #409EFF;
+  color: #409eff;
 }
 .suite-status {
   display: flex;
@@ -543,7 +878,7 @@ const searchClick = async () => {
 }
 .progress-complete .suite-status {
   background: #f0f9f0;
-  color: #67C23A;
+  color: #67c23a;
 }
 .progress-zero .suite-status {
   background: #f5f5f5;
@@ -551,7 +886,7 @@ const searchClick = async () => {
 }
 .progress-loading .suite-status {
   background: #e8f4f8;
-  color: #409EFF;
+  color: #409eff;
 }
 
 :deep(.el-collapse-item__content) {
@@ -563,7 +898,7 @@ const searchClick = async () => {
 }
 
 :deep(.table-header) {
-  @apply bg-gray-200 text-dark-200
+  @apply bg-gray-200 text-dark-200;
 }
 
 /* 搜索栏/工具栏样式保留 */
@@ -594,4 +929,45 @@ const searchClick = async () => {
   position: relative;
   z-index: 10;
 }
+/* test */
+
+.container {
+  height: 600px;
+  overflow-y: auto;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.charts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chart {
+  height: 260px;
+}
+
+.alerts {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.alert-card {
+  margin-bottom: 10px;
+  width: 300px;
+}
+
+.time-range {
+  font-weight: bold;
+}
+
 </style>

@@ -2,7 +2,8 @@ import {
   users_info,
   addition_user,
   del_user,
-  change_user
+  change_user,
+  get_user_statistic
 } from '@/api/users.ts'
 
 
@@ -10,6 +11,11 @@ export const system_users = () => {
 
   const fetchUsers = async (query: any) => {
     const res = await users_info(query)
+    return res.data.data
+  }
+
+  const fetchUsersStatistics = async () => {
+    const res = await get_user_statistic()
     return res.data.data
   }
 
@@ -28,5 +34,5 @@ export const system_users = () => {
     return res.data.data
   }
 
-  return { fetchUsers, additionUser,delUser, changeUser }
+  return { fetchUsers, additionUser,delUser, changeUser, fetchUsersStatistics }
 }

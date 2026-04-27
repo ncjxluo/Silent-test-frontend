@@ -123,7 +123,7 @@ onMounted(async () => {
   top: 64px;
   bottom: 0;
   left: 0;
-  overflow: auto;
+  overflow-y: auto;
   overflow-x: hidden;
   @apply shadow-md fixed bg-gray-900;
 }

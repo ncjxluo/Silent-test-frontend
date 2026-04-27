@@ -73,326 +73,6 @@
   </el-splitter>
 </template>
 
-<!--<script setup lang="ts">-->
-<!--import { ref, reactive, watch, onMounted, onBeforeUnmount } from 'vue'-->
-<!--import { config } from '@/utils/config.ts'-->
-<!--import { ElMessage, ElMessageBox } from 'element-plus'-->
-<!--// 仅需导入核心包，无任何插件依赖-->
-<!--import { debounce } from 'lodash'-->
-<!--import { Terminal } from '@xterm/xterm'-->
-<!--import { FitAddon } from '@xterm/addon-fit'-->
-
-<!--// 引入xterm样式-->
-<!--import '@xterm/xterm/css/xterm.css'-->
-
-<!--// 导入Element Plus图标-->
-<!--import { ArrowDown, Upload, Download, Folder, Document, Refresh } from '@element-plus/icons-vue'-->
-<!--import { useRoute } from 'vue-router'-->
-
-<!--const route = useRoute()-->
-<!--const baseUrl = ref('')-->
-<!--const v_key = route.params.v_key as string-->
-
-<!--// &#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45; 左侧文件树相关 &#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;-->
-<!--// 文件树搜索关键词-->
-<!--const fileSearch = ref('')-->
-<!--// 文件树实例-->
-<!--const fileTreeRef = ref()-->
-<!--// 文件树数据（模拟Linux目录结构）-->
-<!--const fileTreeData = ref([-->
-<!--  {-->
-<!--    id: '/root',-->
-<!--    label: 'root',-->
-<!--    type: 'dir',-->
-<!--    children: [-->
-<!--      {-->
-<!--        id: '/root/scripts',-->
-<!--        label: 'scripts',-->
-<!--        type: 'dir',-->
-<!--        children: [-->
-<!--          { id: '/root/scripts/test.sh', label: 'test.sh', type: 'file' },-->
-<!--          { id: '/root/scripts/oracle.xml', label: 'oracle.xml', type: 'file' },-->
-<!--        ],-->
-<!--      },-->
-<!--      {-->
-<!--        id: '/root/logs',-->
-<!--        label: 'logs',-->
-<!--        type: 'dir',-->
-<!--        children: [-->
-<!--          { id: '/root/logs/access.log', label: 'access.log', type: 'file' },-->
-<!--          { id: '/root/logs/error.log', label: 'error.log', type: 'file' },-->
-<!--        ],-->
-<!--      },-->
-<!--      { id: '/root/.bashrc', label: '.bashrc', type: 'file' },-->
-<!--      { id: '/root/profile', label: 'profile', type: 'file' },-->
-<!--    ],-->
-<!--  },-->
-<!--  {-->
-<!--    id: '/etc',-->
-<!--    label: 'etc',-->
-<!--    type: 'dir',-->
-<!--    children: [-->
-<!--      { id: '/etc/nginx', label: 'nginx', type: 'dir' },-->
-<!--      { id: '/etc/my.cnf', label: 'my.cnf', type: 'file' },-->
-<!--    ],-->
-<!--  },-->
-<!--  {-->
-<!--    id: '/var',-->
-<!--    label: 'var',-->
-<!--    type: 'dir',-->
-<!--    children: [-->
-<!--      { id: '/var/lib', label: 'lib', type: 'dir' },-->
-<!--      { id: '/var/log', label: 'log', type: 'dir' },-->
-<!--    ],-->
-<!--  },-->
-<!--])-->
-
-<!--// 文件树配置-->
-<!--const treeProps = reactive({-->
-<!--  children: 'children',-->
-<!--  label: 'label',-->
-<!--})-->
-
-<!--// 过滤文件树节点-->
-<!--const filterFileNode = (value: string, data: any) => {-->
-<!--  if (!value) return true-->
-<!--  return data.label.toLowerCase().includes(value.toLowerCase())-->
-<!--}-->
-
-<!--// 监听搜索框变化，过滤文件树-->
-<!--watch(fileSearch, (val) => {-->
-<!--  fileTreeRef.value?.filter(val.toLowerCase())-->
-<!--})-->
-<!--//-->
-<!--// // 刷新文件树-->
-<!--// const refreshFileTree = () => {-->
-<!--//   ElMessage.success('文件树已刷新')-->
-<!--//   // 实际项目中调用接口重新获取服务器文件列表-->
-<!--//   fileSearch.value = ''-->
-<!--// }-->
-<!--//-->
-<!--// // 处理文件节点点击（自动发送命令到终端）-->
-<!--// const handleFileNodeClick = (data: any) => {-->
-<!--//   if (data.type === 'file') {-->
-<!--//     ElMessage.info(`你选择了文件：${data.id}`)-->
-<!--//   } else {-->
-<!--//     ElMessage.info(`你选择了目录：${data.id}`)-->
-<!--//   }-->
-<!--// }-->
-<!--//-->
-<!--// // 处理文件上传-->
-<!--// const handleUploadFile = () => {-->
-<!--//   ElMessageBox.prompt('请输入要上传的文件路径（服务器端）', '文件上传', {-->
-<!--//     confirmButtonText: '确认上传',-->
-<!--//     cancelButtonText: '取消',-->
-<!--//     inputValue: '/root/uploads/',-->
-<!--//   })-->
-<!--//     .then(({ value }) => {-->
-<!--//       ElMessage.success(`即将上传文件到：${value}`)-->
-<!--//       // 实际项目中对接文件上传接口-->
-<!--//     })-->
-<!--//     .catch(() => {-->
-<!--//       ElMessage.info('取消文件上传')-->
-<!--//     })-->
-<!--// }-->
-<!--//-->
-<!--// // 处理文件下载-->
-<!--// const handleDownloadFile = () => {-->
-<!--//   const selectedNode = fileTreeRef.value?.getCurrentNode()-->
-<!--//   if (!selectedNode) {-->
-<!--//     ElMessage.warning('请先选择要下载的文件/目录')-->
-<!--//     return-->
-<!--//   }-->
-<!--//   ElMessage.success(`即将下载：${selectedNode.data.id}`)-->
-<!--//   // 实际项目中对接文件下载接口-->
-<!--// }-->
-<!--// //&#45;&#45;&#45;&#45;终端&#45;&#45;&#45;&#45;-->
-<!--const loading = ref(true)-->
-<!--const terminal = ref(null)-->
-<!--const fitAddon = new FitAddon()-->
-<!--const first = ref(true)-->
-<!--const terminalSocket = ref<WebSocket | null>(null)-->
-<!--// 终端-->
-<!--const term = ref<Terminal | null>(null)-->
-<!--//-->
-<!--// // 初始化WS-->
-<!--const initWS = () => {-->
-<!--  if (!terminalSocket.value) {-->
-<!--    createWS()-->
-<!--  }-->
-<!--  // if (terminalSocket.value && terminalSocket.value.readyState > 1) {-->
-<!--  //   terminalSocket.value.close()-->
-<!--  //   createWS()-->
-<!--  // }-->
-<!--}-->
-
-<!--const safeTermWrite = (content: string) => {-->
-<!--  if (term.value) {-->
-<!--    try {-->
-<!--      term.value.write(content)-->
-<!--    } catch (e) {-->
-<!--      console.error('终端写入失败:', e)-->
-<!--    }-->
-<!--  }-->
-<!--}-->
-
-<!--//-->
-<!--// // 创建WS-->
-<!--const createWS = () => {-->
-<!--  // const url = `/access/Api/ws/ssh/b172df81-2485-453d-a6ff-120c03821536?userName=test&passwd=1`-->
-<!--  console.log(baseUrl.value)-->
-<!--  terminalSocket.value = new WebSocket(`ws://${baseUrl.value}api/v1/ws/ws_ssh?v_key=${v_key}`)-->
-<!--  terminalSocket.value.onopen = runRealTerminal-->
-<!--  terminalSocket.value.onmessage = onWSReceive //收到服务器消息-->
-<!--  terminalSocket.value.onclose = closeRealTerminal //WebSocket 连接已关闭-->
-<!--  terminalSocket.value.onerror = errorRealTerminal //WebSocket 连接出错-->
-<!--}-->
-
-<!--//WebSocket 连接已建立-->
-<!--const runRealTerminal = () => {-->
-<!--  loading.value = false-->
-<!--  if (isWsOpen()) {-->
-<!--    terminalSocket.value.send(-->
-<!--      JSON.stringify({-->
-<!--        type: 'init',-->
-<!--        data: {-->
-<!--          v_key: v_key,          // 传 vm 的 key-->
-<!--          cols: term.value.cols,-->
-<!--          rows: term.value.rows,-->
-<!--        },-->
-<!--      })-->
-<!--    )-->
-<!--  }-->
-<!--}-->
-<!--// //WebSocket收到服务器消息-->
-<!--const onWSReceive = (message:any) => {-->
-<!--  const msg = JSON.parse(message.data)-->
-
-<!--  if (msg.type === 'terminal') {-->
-<!--    // 后端发送的 base64 输出-->
-<!--    const decoded = atob(msg.data)-->
-<!--    term.value.write(decoded)-->
-<!--  } else if (msg.type === 'resize') {-->
-<!--    // 后端请求 resize-->
-<!--    term.value.resize(msg.data.cols, msg.data.rows)-->
-<!--  }-->
-<!--  term.value.element && term.value.focus()-->
-
-<!--  // 首次渲染时自适应-->
-<!--  if (first.value === true) {-->
-<!--    first.value = false-->
-<!--    resizeRemoteTerminal()-->
-<!--  }-->
-<!--}-->
-
-<!--// //WebSocket 连接出错-->
-<!--const errorRealTerminal = (ex) => {-->
-<!--  console.log(ex)-->
-<!--}-->
-<!--//   let message = ex.message-->
-<!--//   if (!message) message = 'disconnected'-->
-<!--//   term.value.write(`\x1b[31m${message}\x1b[m\r\n`)-->
-<!--//   console.log('err')-->
-<!--// }-->
-<!--// //WebSocket 连接已关闭-->
-<!--const closeRealTerminal = () => {-->
-<!--  console.log('close')-->
-<!--}-->
-<!--//-->
-<!--// // 初始化Terminal-->
-<!--const initTerm = () => {-->
-<!--  term.value = new Terminal({-->
-<!--    fontSize: 14,-->
-<!--    fontFamily: "Monaco, Menlo, Consolas, 'Courier New', monospace",-->
-<!--    theme: {-->
-<!--      background: '#181d28',-->
-<!--    },-->
-<!--    // 光标闪烁-->
-<!--    cursorBlink: true,-->
-<!--    cursorStyle: 'underline',-->
-<!--    // scrollback: 100,-->
-<!--    // tabStopWidth: 4,-->
-<!--  })-->
-<!--  term.value.open(terminal.value) //挂载dom窗口-->
-<!--  term.value.loadAddon(fitAddon) //自适应尺寸-->
-
-<!--  // 不能初始化的时候fit,需要等terminal准备就绪,可以设置延时操作-->
-<!--  setTimeout(() => {-->
-<!--    fitAddon.fit()-->
-<!--  }, 100)-->
-<!--  termData() //Terminal 事件挂载-->
-<!--}-->
-<!--//-->
-<!--// // 终端输入触发事件-->
-<!--const termData = () => {-->
-<!--  // 输入与粘贴的情况,onData不能重复绑定,不然会发送多次-->
-<!--  term.value.onData((data) => {-->
-<!--    console.log(data, '传入服务器')-->
-<!--    if (isWsOpen()) {-->
-<!--      console.log('ok')-->
-<!--      terminalSocket.value.send(-->
-<!--        JSON.stringify({-->
-<!--          type: 'terminal',-->
-<!--          data: { base64: btoa(data) },-->
-<!--        })-->
-<!--      )-->
-<!--    }-->
-<!--  })-->
-<!--  // 终端尺寸变化触发-->
-<!--  term.value.onResize(() => {-->
-<!--    resizeRemoteTerminal()-->
-<!--  })-->
-<!--}-->
-<!--//-->
-<!--// //尺寸同步 发送给后端,调整后端终端大小,和前端保持一致,不然前端只是范围变大了,命令还是会换行-->
-<!--const resizeRemoteTerminal = () => {-->
-<!--  const { cols, rows } = term.value-->
-<!--  if (isWsOpen()) {-->
-<!--    terminalSocket.value.send(-->
-<!--      JSON.stringify({-->
-<!--        type: 'resize',-->
-<!--        data: {-->
-<!--          rows: rows,-->
-<!--          cols: cols,-->
-<!--        },-->
-<!--      }),-->
-<!--    )-->
-<!--  }-->
-<!--}-->
-<!--//-->
-<!--// // 是否连接中0 1 2 3 状态-->
-<!--const isWsOpen = () => {-->
-<!--  const readyState = terminalSocket.value && terminalSocket.value.readyState-->
-<!--  return readyState === 1-->
-<!--}-->
-<!--//-->
-<!--// // 适应浏览器尺寸变化-->
-<!--const fitTerm = () => {-->
-<!--  fitAddon.fit()-->
-<!--}-->
-<!--const onResize = debounce(() => fitTerm(), 500)-->
-
-<!--const onTerminalResize = () => {-->
-<!--  window.addEventListener('resize', onResize)-->
-<!--}-->
-<!--const removeResizeListener = () => {-->
-<!--  window.removeEventListener('resize', onResize)-->
-<!--}-->
-
-<!--onMounted( async () => {-->
-<!--  const conf = await config.getConfig()-->
-<!--  baseUrl.value = conf.baseUrl.replace('http://', '')-->
-<!--  initWS()-->
-<!--  initTerm()-->
-<!--  onTerminalResize()-->
-<!--})-->
-<!--//-->
-<!--onBeforeUnmount(() => {-->
-<!--  removeResizeListener()-->
-<!--  terminalSocket.value && terminalSocket.value.close()-->
-<!--})-->
-<!--</script>-->
-
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, onBeforeUnmount } from 'vue'
 import { config } from '@/utils/config.ts'
@@ -694,19 +374,18 @@ const onResize = debounce(() => fitTerm(), 500)
 // 挂载生命周期
 onMounted(async () => {
   try {
-    // 获取配置
+
     const conf = await config.getConfig()
     baseUrl.value = conf.baseUrl.replace('http://', '').replace('https://', '')
 
-    // 关键修改：先初始化终端，再连接WebSocket
+
     initTerm()
 
-    // 延迟创建WS连接，确保终端已初始化
+
     setTimeout(() => {
       createWS()
     }, 300)
 
-    // 监听窗口大小变化
     window.addEventListener('resize', onResize)
 
   } catch (e) {
@@ -716,11 +395,6 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  // window.removeEventListener('resize', onResize)
-  // terminalSocket.value?.close()
-  // if (term.value) {
-  //   term.value.dispose()
-  // }
   cleanup()
 })
 
@@ -920,6 +594,12 @@ const cleanup = () => {
 .terminal {
   width: 100%;
   height: calc(100% - 62px);
+  padding-left: 8px;
+  box-sizing: border-box;
+}
+:deep(.xterm) {
+  padding: 2px !important; /* 只作用于终端文字区域，不改变整体大小 */
+  box-sizing: border-box; /* 确保内边距不撑大内部画布 */
 }
 
 /* 终端容器 */

@@ -64,7 +64,7 @@
           >
             <template #header>
               <div class="card-header">
-                <span class="card-title">系统里程碑</span>
+                <span class="card-title">里程碑</span>
               </div>
             </template>
             <!-- 关键：内容区自动填充，红框处不再留白 -->
@@ -111,21 +111,21 @@
                 <div class="stat-icon bg-blue"></div>
                 <div class="stat-info">
                   <p class="stat-name">可连接</p>
-                  <p class="stat-value">98</p>
+                  <p class="stat-value"> {{ vm_statistics.connection_success ?? 0 }} </p>
                 </div>
               </div>
               <div class="small-stat-card">
                 <div class="stat-icon bg-red"></div>
                 <div class="stat-info">
                   <p class="stat-name">无法连接</p>
-                  <p class="stat-value">15</p>
+                  <p class="stat-value">{{ vm_statistics.connection_fail ?? 0 }}</p>
                 </div>
               </div>
               <div class="small-stat-card">
                 <div class="stat-icon bg-gray"></div>
                 <div class="stat-info">
                   <p class="stat-name">未测试</p>
-                  <p class="stat-value">15</p>
+                  <p class="stat-value">{{ vm_statistics.connection_unknown ?? 0 }}</p>
                 </div>
               </div>
             </div>
@@ -152,14 +152,14 @@
                 <div class="stat-icon bg-purple"></div>
                 <div class="stat-info">
                   <p class="stat-name">用户数</p>
-                  <p class="stat-value">98</p>
+                  <p class="stat-value">{{ uers_statistics.total_count }}</p>
                 </div>
               </div>
               <div class="small-stat-card">
                 <div class="stat-icon bg-green"></div>
                 <div class="stat-info">
                   <p class="stat-name">在线用户数</p>
-                  <p class="stat-value">15</p>
+                  <p class="stat-value">{{ uers_statistics.online_count }}</p>
                 </div>
               </div>
             </div>
@@ -308,7 +308,12 @@ import * as echarts from 'echarts'
 import { str_dashboard } from '@/hooks/dashboard.ts'
 import GeneralTable from '@/components/GeneralTable.vue'
 import GeneralDialog from '@/components/GeneralDialog.vue'
+import { system_users } from '@/hooks/systems/users.ts'
+import { serversetting } from '@/hooks/hostmanagement/serversetting.ts'
+
 const { getNotice, getMemo, addMemo, editMemo, delMemo } = str_dashboard()
+const { fetchUsersStatistics } = system_users()
+const { fetchVirtualMachineStatistics } = serversetting()
 
 // 代办事项模块
 const is_enable = ref(true)
@@ -518,6 +523,37 @@ const operationLogs = ref([
   },
 ])
 
+// 虚机统计
+interface VMStatistics {
+  connection_success?: string
+  connection_fail?: string
+  connection_unknown?: string
+}
+
+const vm_statistics = ref<VMStatistics>({})
+
+const fetchVMStatistics = async () => {
+  const res: VMStatistics = await fetchVirtualMachineStatistics()
+  vm_statistics.value.connection_success = res.connection_success
+  vm_statistics.value.connection_fail = res.connection_fail
+  vm_statistics.value.connection_unknown = res.connection_unknown
+}
+
+// 用户统计
+interface UserStatistics {
+  total_count?: string
+  online_count?: string
+}
+
+const uers_statistics = ref<UserStatistics>({})
+
+const fetchStatistics = async () => {
+  const res: UserStatistics = await fetchUsersStatistics()
+  uers_statistics.value.total_count = res.total_count
+  uers_statistics.value.online_count = res.online_count
+}
+
+
 // ECharts 初始化
 const deployChartRef = ref<HTMLElement>()
 onMounted(async () => {
@@ -529,6 +565,8 @@ onMounted(async () => {
       currentPage.value,
       defaultCount.value,
     )
+    await fetchStatistics()
+    await fetchVMStatistics()
     chart.setOption({
       tooltip: { trigger: 'axis' },
       xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] },

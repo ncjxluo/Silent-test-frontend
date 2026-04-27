@@ -145,9 +145,9 @@ const dept_options = ref<DeptItem[]>([])
 const role_options = ref<RoleItem[]>([])
 
 const is_enable = ref(true)
-const defaultCounts = ref([3, 30, 50, 100])
+const defaultCounts = ref([ 30, 50, 100])
 const currentPage = ref(1)
-const defaultCount = ref(3)
+const defaultCount = ref(30)
 const totalCount = ref(0)
 const searchKeys = ref(['agent_name', 'agent_status'])
 
@@ -197,6 +197,12 @@ const columnDatas = ref([
   {
     label: '创建时间',
     prop: 'created_at',
+    customRender: (row: any) => {
+      // 截取字符串：2026-03-11 18:23
+      const timeText = row.created_at?.toString().slice(0, 16) || ''
+      // 必须用 h() 返回节点
+      return h('span', null, timeText)
+    },
   },
 ])
 

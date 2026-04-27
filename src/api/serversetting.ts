@@ -20,6 +20,10 @@ export const get_virtual_machine = (query = {}) =>{
   return service.get('/server_setting/get_virtual_machine', {params: query})
 }
 
+export const get_virtual_machine_status = (query = {}) =>{
+  return service.get('/server_setting/get_virtual_machine_status', {params: query})
+}
+
 export const verify_virtual_machine = (data = {}) =>{
   return service.post('/server_setting/verify_virtual_machine', data)
 }
@@ -34,4 +38,8 @@ export const del_virtual_machine = (data = {}) =>{
 
 export const edit_virtual_machine = (data = {}) =>{
   return service.post('/server_setting/edit_virtual_machine', data)
+}
+
+export const virtual_machine_statistic = (query = {}) =>{
+  return service.get('/server_setting/virtual_machine_statistic', {params: query})
 }

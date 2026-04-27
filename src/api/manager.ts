@@ -15,3 +15,6 @@ export const user_menu_info = () =>{
   return service.get('/dashboard/get_user_menu',)
 }
 
+export const user_heartbeat = () => {
+  return service.get('/systems/user_heartbeat',)
+}

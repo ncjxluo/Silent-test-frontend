@@ -12,6 +12,10 @@ export const get_message_channel = () =>{
   return service.get('/message_center/get_message_channel')
 }
 
+export const get_message_channel_status = (query = {}) =>{
+  return service.get('/message_center/get_message_channel_status',{params: query})
+}
+
 export const setting_message_status = (data = {}) =>{
   return service.post('/message_center/setting_message_status', data)
 }

@@ -1,4 +1,4 @@
-import { add_server_group, get_server_group, del_server_group, add_virtual_machine, get_virtual_machine, verify_virtual_machine, get_virtual_machine_search,del_virtual_machine,edit_virtual_machine } from '@/api/serversetting.ts'
+import { add_server_group, get_server_group, del_server_group, add_virtual_machine, get_virtual_machine, verify_virtual_machine, get_virtual_machine_search,del_virtual_machine,edit_virtual_machine,virtual_machine_statistic,get_virtual_machine_status } from '@/api/serversetting.ts'
 
 
 export const serversetting = () => {
@@ -28,6 +28,11 @@ export const serversetting = () => {
     return res.data.data
   }
 
+  const getVirtualMachineStatus = async (query: any) => {
+    const res = await get_virtual_machine_status(query)
+    return res.data.data
+  }
+
   const verifyVirtualMachine = async (data: any) => {
     const res = await verify_virtual_machine(data)
     return res.data.data
@@ -48,5 +53,10 @@ export const serversetting = () => {
     return res.data.data
   }
 
-  return { addServerGroup, getServerGroup, delServerGroup, addVirtualMachine, getVirtualMachine, verifyVirtualMachine, getVirtualMachineAllSearch,delVirtualMachine,editVirtualMachine }
+  const fetchVirtualMachineStatistics = async () => {
+    const res = await virtual_machine_statistic()
+    return res.data.data
+  }
+
+  return { addServerGroup, getServerGroup, delServerGroup, addVirtualMachine, getVirtualMachine, verifyVirtualMachine, getVirtualMachineAllSearch,delVirtualMachine,editVirtualMachine,fetchVirtualMachineStatistics,getVirtualMachineStatus }
 }

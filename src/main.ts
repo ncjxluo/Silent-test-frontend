@@ -6,6 +6,8 @@ import { router } from './router/index'
 import 'virtual:windi.css'
 import { createPinia } from 'pinia'
 import 'nprogress/nprogress.css'
+import '@/styles/global.css'
+import './monaco/worker'
 // import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 

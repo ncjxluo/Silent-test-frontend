@@ -114,7 +114,7 @@ const defaultCountLocal = ref(props.defaultCount)
 const search = ref('')
 
 const is_enabled_header = computed(() => {
-  console.log('1'+props.is_enable_header)
+  // console.log('1'+props.is_enable_header)
   return props.is_enable_header === '0' ? false : true;
 })
 
@@ -180,7 +180,7 @@ const exportData = () => {
     saveAs(blob, `${date.toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`)
     ElMessage.success('导出成功')
   } catch (e) {
-    console.log(e)
+    // console.log(e)
     ElMessage.error('导出失败')
   }
 }

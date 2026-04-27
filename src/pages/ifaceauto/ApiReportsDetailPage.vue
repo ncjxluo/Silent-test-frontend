@@ -594,7 +594,7 @@ const currentAllDatas = async () => {
     saveAs(blob, `${date.toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`)
     ElMessage.success('导出成功')
   } catch (e) {
-    console.log(e)
+    // console.log(e)
     ElMessage.error('导出失败')
   }
 }
@@ -627,7 +627,7 @@ const currentPageDatas = () => {
     saveAs(blob, `${date.toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`)
     ElMessage.success('导出成功')
   } catch (e) {
-    console.log(e)
+    // console.log(e)
     ElMessage.error('导出失败')
   }
 }
@@ -639,10 +639,10 @@ const truncateText = (text: string | undefined, maxLength: number = 1000): strin
 }
 
 const editCase = async (row: any) => {
-  console.log(suite_key)
-  console.log(plan_key)
-  console.log(row.remarks)
-  console.log(row)
+  // console.log(suite_key)
+  // console.log(plan_key)
+  // console.log(row.remarks)
+  // console.log(row)
   const res = await editorCase({
     suite_key: suite_key,
     plan_key: plan_key,

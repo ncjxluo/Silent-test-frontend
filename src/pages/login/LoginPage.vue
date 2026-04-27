@@ -73,6 +73,7 @@ import { login } from '@/api/manager'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { ElInput } from 'element-plus'
+import { startHeartbeat } from '@/utils/util.ts'
 
 
 const router = useRouter()
@@ -122,6 +123,7 @@ const handleLogin = async () => {
     authStore.setTokens(payload)
     localStorage.setItem("username", res.data.data.username)
     localStorage.setItem("user_url", res.data.data.user_url)
+    startHeartbeat()
     await router.push({name: '/home'})
   }else {
     ElMessage.error(res.data.message)

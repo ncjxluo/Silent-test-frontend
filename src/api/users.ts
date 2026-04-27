@@ -15,3 +15,7 @@ export const del_user = (data = {}) =>{
 export const change_user = (data = {}) =>{
   return service.post('/systems/edit_user',data)
 }
+
+export const get_user_statistic = (query = {}) =>{
+  return service.get('/systems/get_user_statistic',{params: query})
+}
